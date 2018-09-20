@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import 'whatwg-fetch';
+var ethereum_address_module = require('ethereum-address');
 
 class Home extends Component {
   constructor(props) {
@@ -11,7 +12,8 @@ class Home extends Component {
       ethAddress: '',
       balance: '',
       loadingBalance: false,
-      loadingTx: false
+      loadingTx: false,
+      errMsg:''
     };
 
     this.newCounter = this.newCounter.bind(this);
@@ -94,11 +96,20 @@ class Home extends Component {
     this.setState({
       ethAddress: event.target.value,
       balance:'',
-      tx:[]
+      tx:[],
+      errMsg:''
     });
   }
 
   handleSubmit(event) {
+    event.preventDefault();  
+    this.setState({errMsg:''});
+    if(!ethereum_address_module.isAddress(this.state.ethAddress)) {
+      this.setState({
+        errMsg:'Not a valid ethereum address!'
+      });
+      return false;
+    }
     //alert('A name was submitted: ' + this.state.ethAddress);
     this.setState({
       balance:'',
@@ -177,7 +188,6 @@ class Home extends Component {
       //     addresses: data
       //   });
       // });
-    event.preventDefault();  
   }
 
   render() {
@@ -203,7 +213,8 @@ class Home extends Component {
             <div className="searchForm">
               <form onSubmit={this.handleSubmit}>
               <div className="form-group">
-                <input className="form-control" type="text" value={this.state.ethAddress} onChange={this.handleChange} />
+                <input required className="form-control" type="text" value={this.state.ethAddress} onChange={this.handleChange} />
+                {this.state.errMsg != '' && <h5>Error: {this.state.errMsg}</h5>}
               </div>
               <div className="text-center">
                 <button type="submit" className="btn btn-success">Submit</button>

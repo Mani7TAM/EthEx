@@ -13,6 +13,7 @@ const webpackConfig = require('../webpack.config');
 const isDev = process.env.NODE_ENV !== 'production';
 const port  = process.env.PORT || 8080;
 
+//const bodyParser = require('body-parser');
 
 // Configuration
 // ================================================================================================
@@ -24,6 +25,10 @@ mongoose.Promise = global.Promise;
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Tell the bodyparser middleware to accept more data
+// app.use(bodyParser.json({limit: '50mb'}));
+// app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
 
 // API routes
 require('./routes')(app);
