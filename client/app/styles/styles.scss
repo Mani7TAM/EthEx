@@ -1,0 +1,39 @@
+@charset "UTF-8";
+
+@import 'vendor/normalize';
+
+body{
+    background:#0b1c30 url(/assets/img/blue_bg.jpg) no-repeat;
+    height: 100vh;
+    color:white;
+    font-family: Open Sans, Lato;
+}
+.header{
+    text-align: center;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+footer {
+    position:absolute;
+    bottom:0;
+    width:100%;
+    height:60px;   /* Height of the footer */
+}
+.resultTxDiv{
+    overflow: auto
+}    
+.resultTxDiv table thead{
+    background: #0b355d;
+    white-space: nowrap;
+}
+.loadingDiv{
+    text-align: center;
+}
+.loadingImage{
+    height: 100px;
+}
+.noResultDiv{
+    text-align: center;
+    padding: 20px;
+}
