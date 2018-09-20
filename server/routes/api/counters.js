@@ -3,6 +3,7 @@ const Address = require('../../models/Address');
 const Transaction = require('../../models/Transaction');
 const InternalTransaction = require('../../models/InternalTransaction');
 const TokenTransaction = require('../../models/TokenTransaction');
+const ContractData = require('../../models/ContractData');
 
 module.exports = (app) => {
   app.get('/api/address', (req, res, next) => {
@@ -107,6 +108,29 @@ module.exports = (app) => {
       .exec()
       .then(()=> {
         TokenTransaction.find(query)
+          .exec()
+          .then((transactions) => res.json(transactions))
+          .catch((err) => next(err));
+      }).catch((err) => next(err));
+  });
+
+  app.post('/api/contractData', function (req, res, next) {
+    var query = { address: req.body.address };
+    ContractData.findOneAndUpdate(
+      query,
+      { 
+        address: req.body.address,
+        data:req.body.data 
+      }, 
+      { 
+        upsert: true,
+        new: true,
+        overwrite: true 
+      }
+      )
+      .exec()
+      .then(()=> {
+        ContractData.find(query)
           .exec()
           .then((transactions) => res.json(transactions))
           .catch((err) => next(err));

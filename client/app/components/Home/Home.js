@@ -13,6 +13,7 @@ class Home extends Component {
       tx: [],
       int_tx:[],
       token_tx:[],
+      contractData:[],
       address: '',
       ethAddress: '',
       balance: '',
@@ -20,8 +21,9 @@ class Home extends Component {
       loadingTx: false,
       loadingIntTx:false,
       loadingTokenTx:false,
+      loadingContractData:false,
       errMsg:'',
-      submitted:false
+      submitted:false,
     };
 
     this.handleChange = this.handleChange.bind(this);
@@ -65,6 +67,7 @@ class Home extends Component {
       tx:[],
       int_tx:[],
       token_tx:[],
+      contractData:[],
       loadingBalance: true ,
       loadingTx: true,
       submitted:true 
@@ -213,8 +216,49 @@ class Home extends Component {
         console.log('err',error);
       });
     }
+    else if(key == 4 && this.state.contractData.length == 0 && this.state.ethAddress != '' && this.state.submitted){
+      this.setState({
+        loadingContractData: true,
+      });
+      var url = 'https://api.etherscan.io/api?module=contract&action=getsourcecode&address='+this.state.ethAddress+'&apikey=6Q4J4FZZRCHPRB4JPES8N7SY1IS4HRGEET';
+      //var url = 'https://api.etherscan.io/api?module=contract&action=getabi&address='+this.state.ethAddress+'&apikey=6Q4J4FZZRCHPRB4JPES8N7SY1IS4HRGEET';
+      fetch(url,{}).then(res => res.json())
+      .then(json => {
+        this.setState({
+          contractData: json.result,
+          loadingContractData:false
+        });
+        var contractAddress = false;
+          for(var i = 0; i < json.result.length; i++) {
+            if(json.result[i].ContractName != ''){
+              contractAddress = true;    
+            }
+          }
+        if(!contractAddress){
+          return false;
+        }
+        fetch('/api/contractData', { 
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+                'address': this.state.ethAddress,
+                'data': json.result
+            }) 
+          })
+          .then(res => res.json())
+          .then(json => {
+            console.log(json);
+            // this.setState({
+            //   token_tx: json,
+            //   loadingTx:false
+            // });
+          });
+      }, error =>{
+        console.log('err',error);
+      });
+    }
   }
-
+  
   render() {
     return (
       <>
@@ -225,7 +269,7 @@ class Home extends Component {
               <form onSubmit={this.handleSubmit}>
               <div className="form-group">
                 <input required className="form-control" type="text" value={this.state.ethAddress} onChange={this.handleChange} />
-                {this.state.errMsg != '' && <h5>Error: {this.state.errMsg}</h5>}
+                {this.state.errMsg != '' && <p className="text-center text-danger bg-warning">Error: {this.state.errMsg}</p>}
               </div>
               <div className="text-center">
                 <button type="submit" className="btn btn-success">Submit</button>
@@ -243,7 +287,7 @@ class Home extends Component {
                 <tr><td className="p-0">Address</td><td  className="p-0">
                 {this.state.loadingBalance && <img className="loadingImageSmall" src="/assets/img/loading.gif" /> }
                 {this.state.balance != '' && <span>{this.state.address}</span>}
-                {this.state.address == '' && !this.state.loadingBalance && <span>-</span>} </td></tr>
+                {this.state.balance == '' && !this.state.loadingBalance && <span>-</span>} </td></tr>
                 <tr><td className="p-0">Balance</td><td  className="p-0">
                   {this.state.loadingBalance && <img className="loadingImageSmall" src="/assets/img/loading.gif" /> }
                   {this.state.balance != '' && <span>{this.state.balance/10**18} Ether</span>} 
@@ -418,6 +462,90 @@ class Home extends Component {
           </div>
         }
         </Tab>
+
+        <Tab eventKey={4} title="Code">
+          <div className="resultTxDiv">
+            
+            { this.state.loadingContractData && <div className="loadingDiv"><img className="loadingImage" src="/assets/img/loading.gif" /></div> }
+            { this.state.contractData && this.state.contractData.length == 0 && !this.state.loadingContractData && <div className="noResultDiv"> No result! </div>}
+            { this.state.contractData && this.state.contractData.length > 0 &&
+              <div>
+                { this.state.contractData.map((data, i) => (
+                <div key={i}>
+                  { data.ContractName != '' &&  
+                    <div>              
+                      <div className="overview-div col-md-12">
+                        <div className="col-md-6">
+                        <table className="overview-table table table-responsive">
+                        <tbody>
+                          <tr> 
+                            <td className="p-0">Contract Name</td>
+                            <td className="p-0">{data.ContractName}</td>
+                          </tr>
+                          <tr>  
+                            <td className="p-0">Compiler Version</td>
+                            <td className="p-0">{data.CompilerVersion}</td>
+                          </tr>
+                          
+                        </tbody>
+                        </table>
+                        </div>  
+                        <div className="col-md-6">
+                        <table className="overview-table table table-responsive">
+                        <tbody> 
+                          <tr>  
+                            <td className="p-0">Optimization Used</td>
+                            <td className="p-0">{data.OptimizationUsed}</td>
+                          </tr>  
+                          <tr>
+                            <td className="p-0">Runs (Optimizer)</td>
+                            <td className="p-0">{data.Runs}</td>
+                          </tr>   
+                          {/* <tr>
+                            <td className="p-0">Constructor Arguments</td>
+                            <td className="p-0">{data.ConstructorArguments}</td>
+                          </tr>  
+                          <tr>
+                            <td className="p-0">Library</td>
+                            <td className="p-0">{data.Library}</td>
+                          </tr>
+                          <tr>  
+                            <td className="p-0">SwarmSource</td>
+                            <td className="p-0">{data.SwarmSource}</td>
+                          </tr>   */}
+                        </tbody>
+                        </table>
+                        </div>
+                      </div>  
+                    <h5>Contract SourceCode <i className="glyphicon glyphicon-pencil"></i></h5>
+                    <pre className="abiCode">{data.SourceCode}</pre>
+                    <br/>
+                    <h5>Contract ABI <i className="glyphicon glyphicon-cog"></i></h5>
+                    <pre className="abiCode">{data.ABI}</pre>
+                    <br/>
+                    {/* { data.ConstructorArguments != '' &&      
+                      <div>
+                      <h5>Contract Creation Code <i className="glyphicon glyphicon-file"></i></h5>
+                      <pre className="abiCode">{data.ConstructorArguments}</pre>
+                      <br/>
+                      </div>
+                    } */}
+                    <h5>Swarm Source <i className="glyphicon glyphicon-tasks"></i></h5>
+                    <pre>{data.SwarmSource}</pre>
+                  </div>
+                }
+                { data.ContractName == '' && 
+                  <h3 className="text-center">Not a contract address!</h3>
+                }
+                </div>
+                ))}
+              </div>
+            }
+
+          </div>
+        
+        </Tab>
+
       </Tabs>
     </div>
       
