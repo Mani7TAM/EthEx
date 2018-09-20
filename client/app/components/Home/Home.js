@@ -25,13 +25,13 @@ class Home extends Component {
   }
 
   componentDidMount() {
-    fetch('/api/counters')
-      .then(res => res.json())
-      .then(json => {
-        this.setState({
-          counters: json
-        });
-      });
+    // fetch('/api/counters')
+    //   .then(res => res.json())
+    //   .then(json => {
+    //     this.setState({
+    //       counters: json
+    //     });
+    //   });
   }
 
   newCounter() {

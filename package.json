@@ -1,11 +1,11 @@
 {
-  "name": "MERN-boilerplate",
+  "name": "EthEx",
   "version": "1.0.0",
-  "description": "MERN stack project boilerplate",
-  "author": "Eugene Cheung",
+  "description": "Ethereum Explorer",
+  "author": "SubraManian",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/arkon/MERN-boilerplate.git"
+    "url": "git+https://github.com/Mani7TAM/EthEx"
   },
   "license": "MIT",
   "private": true,
