@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { Tabs, Tab } from 'react-bootstrap';
 import 'whatwg-fetch';
 var ethereum_address_module = require('ethereum-address');
 
@@ -7,23 +8,25 @@ class Home extends Component {
     super(props);
 
     this.state = {
+      key: 1,
       counters: [],
       tx: [],
+      int_tx:[],
+      token_tx:[],
+      address: '',
       ethAddress: '',
       balance: '',
       loadingBalance: false,
       loadingTx: false,
-      errMsg:''
+      loadingIntTx:false,
+      loadingTokenTx:false,
+      errMsg:'',
+      submitted:false
     };
 
-    this.newCounter = this.newCounter.bind(this);
-    this.incrementCounter = this.incrementCounter.bind(this);
-    this.decrementCounter = this.decrementCounter.bind(this);
-    this.deleteCounter = this.deleteCounter.bind(this);
-
-    this._modifyCounter = this._modifyCounter.bind(this);
     this.handleChange = this.handleChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleSelect = this.handleSelect.bind(this);
   }
 
   componentDidMount() {
@@ -36,74 +39,20 @@ class Home extends Component {
     //   });
   }
 
-  newCounter() {
-    fetch('/api/counters', { method: 'POST' })
-      .then(res => res.json())
-      .then(json => {
-        let data = this.state.counters;
-        data.push(json);
-
-        this.setState({
-          counters: data
-        });
-      });
-  }
-
-  incrementCounter(index) {
-    const id = this.state.counters[index]._id;
-
-    fetch(`/api/counters/${id}/increment`, { method: 'PUT' })
-      .then(res => res.json())
-      .then(json => {
-        this._modifyCounter(index, json);
-      });
-  }
-
-  decrementCounter(index) {
-    const id = this.state.counters[index]._id;
-
-    fetch(`/api/counters/${id}/decrement`, { method: 'PUT' })
-      .then(res => res.json())
-      .then(json => {
-        this._modifyCounter(index, json);
-      });
-  }
-
-  deleteCounter(index) {
-    const id = this.state.counters[index]._id;
-
-    fetch(`/api/counters/${id}`, { method: 'DELETE' })
-      .then(_ => {
-        this._modifyCounter(index, null);
-      });
-  }
-
-  _modifyCounter(index, data) {
-    let prevData = this.state.counters;
-
-    if (data) {
-      prevData[index] = data;
-    } else {
-      prevData.splice(index, 1);
-    }
-
-    this.setState({
-      counters: prevData
-    });
-  }
-
   handleChange(event) {
     this.setState({
       ethAddress: event.target.value,
       balance:'',
-      tx:[],
+      //tx:[],
+      //int_tx:[],
+      //token_tx:[],
       errMsg:''
     });
   }
 
   handleSubmit(event) {
     event.preventDefault();  
-    this.setState({errMsg:''});
+    this.setState({errMsg:'',key:1});
     if(!ethereum_address_module.isAddress(this.state.ethAddress)) {
       this.setState({
         errMsg:'Not a valid ethereum address!'
@@ -114,14 +63,18 @@ class Home extends Component {
     this.setState({
       balance:'',
       tx:[],
+      int_tx:[],
+      token_tx:[],
       loadingBalance: true ,
-      loadingTx: true 
+      loadingTx: true,
+      submitted:true 
     });
-    var url = 'https://api.etherscan.io/api?module=account&action=balance&address='+this.state.ethAddress+'&tag=latest&apikey=VK752U6MZCJH691RNJ1C2EA1VTDTNTAWJW';
+    var url = 'https://api.etherscan.io/api?module=account&action=balance&address='+this.state.ethAddress+'&tag=latest&apikey=6Q4J4FZZRCHPRB4JPES8N7SY1IS4HRGEET';
     fetch(url,{}).then(res => res.json())
     .then(json => {
       console.log('json',json);
       this.setState({
+        address: this.state.ethAddress,
         balance: json.result,
         loadingBalance:false
       });
@@ -146,11 +99,16 @@ class Home extends Component {
       console.log('err',error);
     });
 
-    var url = 'https://api.etherscan.io/api?module=account&action=txlist&address='+this.state.ethAddress+'&startblock=0&endblock=99999999&sort=asc&apikey=VK752U6MZCJH691RNJ1C2EA1VTDTNTAWJW';
-    //var url = 'http://api-ropsten.etherscan.io/api?module=account&action=txlistinternal&address=0x48B0f9ad2bC924255608dbADb948d91c6Bbb805f&sort=asc&apikey=VK752U6MZCJH691RNJ1C2EA1VTDTNTAWJW';
+    var url = 'https://api.etherscan.io/api?module=account&action=txlist&address='+this.state.ethAddress+'&startblock=0&endblock=99999999&sort=asc&apikey=6Q4J4FZZRCHPRB4JPES8N7SY1IS4HRGEET';
     fetch(url,{}).then(res => res.json())
     .then(json => {
-      console.log('json',json);
+      for(var i = 0; i < json.result.length; i++) {
+        delete json.result[i]['input'];
+      }
+      this.setState({
+        tx: json.result,
+        loadingTx:false
+      });
       fetch('/api/addressTransaction', { 
            method: 'POST',
            headers: {'Content-Type':'application/json'},
@@ -162,51 +120,104 @@ class Home extends Component {
          .then(res => res.json())
          .then(json => {
            console.log(json);
-           this.setState({
-             tx: json,
-             loadingTx:false
-           });
+          //  this.setState({
+          //    tx: json,
+          //    loadingTx:false
+          //  });
          });
     }, error =>{
       console.log('err',error);
     });
+  
+  }
 
-    // fetch('/api/address', { 
-    //     method: 'POST',
-    //     headers: {'Content-Type':'application/json'},
-    //     body: JSON.stringify({
-    //       'address': this.state.ethAddress
-    //     }) 
-    //   });
-      // .then(res => res.json())
-      // .then(json => {
-      //   console.log(json);
-      //   let data = this.state.ethAddress;
-      //   data.push(json);
-
-      //   this.setState({
-      //     addresses: data
-      //   });
-      // });
+  handleSelect(key) {
+    if(!ethereum_address_module.isAddress(this.state.ethAddress)) {
+      this.setState({
+        errMsg:'Not a valid ethereum address!'
+      });
+      return false;
+    }
+    this.setState({
+      key: key
+    });
+    console.log(key);
+    if(key == 2 && this.state.int_tx.length == 0 && this.state.ethAddress != '' && this.state.submitted ){
+      this.setState({
+        loadingIntTx: true,
+      });
+      var url = 'https://api.etherscan.io/api?module=account&action=txlistinternal&address='+this.state.ethAddress+'&sort=asc&apikey=6Q4J4FZZRCHPRB4JPES8N7SY1IS4HRGEET';
+      fetch(url,{}).then(res => res.json())
+      .then(json => {
+        console.log(json);
+        for(var i = 0; i < json.result.length; i++) {
+          delete json.result[i]['input'];
+        }
+        this.setState({
+          int_tx: json.result,
+          loadingIntTx:false
+        });
+        fetch('/api/addressInternalTransaction', { 
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+                'address': this.state.ethAddress,
+                'data': json.result
+            }) 
+          })
+          .then(res => res.json())
+          .then(json => {
+            console.log(json);
+            // this.setState({
+            //   int_tx: json,
+            //   loadingTx:false
+            // });
+          });
+      }, error =>{
+        console.log('err',error);
+      });
+    }
+    else if(key == 3 && this.state.token_tx.length == 0 && this.state.ethAddress != '' && this.state.submitted){
+      this.setState({
+        loadingTokenTx: true,
+      });
+      var url = 'https://api.etherscan.io/api?module=account&action=tokentx&address='+this.state.ethAddress+'&startblock=0&endblock=999999999&sort=asc&apikey=6Q4J4FZZRCHPRB4JPES8N7SY1IS4HRGEET';
+      fetch(url,{}).then(res => res.json())
+      .then(json => {
+        //console.log('json',json);
+        for(var i = 0; i < json.result.length; i++) {
+          delete json.result[i]['input'];
+        }
+        //console.log('json',json);
+        this.setState({
+          token_tx: json.result,
+          loadingTokenTx:false
+        });
+        fetch('/api/addressTokenTransaction', { 
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({
+                'address': this.state.ethAddress,
+                'data': json.result
+            }) 
+          })
+          .then(res => res.json())
+          .then(json => {
+            console.log(json);
+            // this.setState({
+            //   token_tx: json,
+            //   loadingTx:false
+            // });
+          });
+      }, error =>{
+        console.log('err',error);
+      });
+    }
   }
 
   render() {
     return (
       <>
-        {/* <p>Counters:</p>
-
-        <ul>
-          { this.state.counters.map((counter, i) => (
-            <li key={i}>
-              <span>{counter.count} </span>
-              <button onClick={() => this.incrementCounter(i)}>+</button>
-              <button onClick={() => this.decrementCounter(i)}>-</button>
-              <button onClick={() => this.deleteCounter(i)}>x</button>
-            </li>
-          )) }
-        </ul>
-
-        <button onClick={this.newCounter}>New counter</button> */}
       <div className="container">
         <div className="row">
           <div className="col-md-6 col-md-offset-3">
@@ -224,94 +235,194 @@ class Home extends Component {
             </div>
           </div>
         </div>
-
-        <h2>Balance:</h2>
-        {this.state.loadingBalance && <div className="loadingDiv"><img className="loadingImage" src="/assets/img/loading.gif" /></div> }
-        {this.state.balance == '' && !this.state.loadingBalance && 
-        <div className="noResultDiv"> No result! </div>}
-        {this.state.balance != '' &&
-        <div className="col-md-12">
-          <div className="resultDiv">
-            <table className="table table-responsive">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Address</th>
-                  <th>Balance</th>
-                </tr>  
-              </thead>
+        
+        <div className="row">
+          <div className="col-md-6 tableDiv">
+            <table className="table table-responsive overview-table">
               <tbody>
-                <tr>
-                  <td>1</td>
-                  <td>{this.state.ethAddress}</td>
-                  <td>{this.state.balance/10**18} Ether</td>
-                </tr>
-              </tbody>
+                <tr><td className="p-0">Address</td><td  className="p-0">
+                {this.state.loadingBalance && <img className="loadingImageSmall" src="/assets/img/loading.gif" /> }
+                {this.state.balance != '' && <span>{this.state.address}</span>}
+                {this.state.address == '' && !this.state.loadingBalance && <span>-</span>} </td></tr>
+                <tr><td className="p-0">Balance</td><td  className="p-0">
+                  {this.state.loadingBalance && <img className="loadingImageSmall" src="/assets/img/loading.gif" /> }
+                  {this.state.balance != '' && <span>{this.state.balance/10**18} Ether</span>} 
+                  {this.state.balance == '' && !this.state.loadingBalance && <span>-</span>}  </td></tr>
+              </tbody>  
             </table>
           </div>
         </div>
-        }
-
+      
          
-
-      <h2>Transactions:</h2>
-      { this.state.loadingTx && <div className="loadingDiv"><img className="loadingImage" src="/assets/img/loading.gif" /></div> }
-      { this.state.tx && this.state.tx.length == 0 && !this.state.loadingTx && 
-        <div className="noResultDiv"> No result! </div>}
-      { this.state.tx && this.state.tx.length > 0 &&
-      <div className="col-md-12">
-        <div className="resultTxDiv">
-        <table className="table table-responsive">
-          <thead>
-            <tr>
-              <th>Block Number</th>
-              <th>Timestamp</th>
-              <th>Hash</th>
-              <th>Nonce</th>
-              <th>Block Hash</th>
-              <th>Transaction Index</th>
-              <th>From</th>
-              <th>To</th>
-              <th>Value</th>
-              <th>Gas</th>
-              <th>Gas Price</th>
-              <th>Is Error</th>
-              <th>Tx Receipt Status</th>
-              <th>Input</th>
-              <th>Contract Address</th>
-              <th>Cumulative Gas Used</th>
-              <th>Confirmations</th>
-            </tr>
-          </thead>
-          <tbody>
-          { this.state.tx[0].data.map((txSingle, i) => (
-            <tr key={i}>
-              <td>{txSingle.blockNumber}</td>
-              <td>{txSingle.timeStamp}</td>
-              <td>{txSingle.hash}</td>
-              <td>{txSingle.nonce}</td>
-              <td>{txSingle.blockHash}</td>
-              <td>{txSingle.transactionIndex}</td>
-              <td>{txSingle.from}</td>
-              <td>{txSingle.to}</td>
-              <td>{txSingle.value}</td>
-              <td>{txSingle.gas}</td>
-              <td>{txSingle.gasPrice}</td>
-              <td>{txSingle.isError}</td>
-              <td>{txSingle.txreceipt_status}</td>
-              <td>{txSingle.input}</td>
-              <td>{txSingle.contractAddress}</td>
-              <td>{txSingle.cumulativeGasUsed}</td>
-              <td>{txSingle.confirmations}</td>
-            </tr>
-          )) }
-          </tbody>
-        </table>
+      <Tabs
+        activeKey={this.state.key}
+        onSelect={this.handleSelect}
+        id="controlled-tab-example"
+      >
+        <Tab eventKey={1} title="Transactions">
+        { this.state.loadingTx && <div className="loadingDiv"><img className="loadingImage" src="/assets/img/loading.gif" /></div> }
+        { this.state.tx && this.state.tx.length == 0 && !this.state.loadingTx && 
+          <div className="noResultDiv"> No result! </div>}
+        { this.state.tx && this.state.tx.length > 0 &&
+          <div className="resultTxDiv">
+          <table className="table table-responsive">
+            <thead>
+              <tr>
+                <th>Block Number</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Value</th>
+                <th>Gas</th>
+                <th>Gas Price</th>
+                <th>Is Error</th>
+                <th>Tx Receipt Status</th>
+                {/* <th>Input</th> */}
+                <th>Contract Address</th>
+                <th>Cumulative Gas Used</th>
+                <th>Confirmations</th>
+                <th>Timestamp</th>
+                <th>Hash</th>
+                <th>Nonce</th>
+                <th>Block Hash</th>
+                <th>Transaction Index</th>
+              </tr>
+            </thead>
+            <tbody>
+            { this.state.tx.map((txSingle, i) => (
+              <tr key={i}>
+                <td>{txSingle.blockNumber}</td>
+                <td>{txSingle.from}</td>
+                <td>{txSingle.to}</td>
+                <td>{txSingle.value/10**18} Ether</td>
+                <td>{txSingle.gas}</td>
+                <td>{txSingle.gasPrice}</td>
+                <td>{txSingle.isError}</td>
+                <td>{txSingle.txreceipt_status}</td>
+                {/* <td>{txSingle.input}</td> */}
+                <td>{txSingle.contractAddress}</td>
+                <td>{txSingle.cumulativeGasUsed}</td>
+                <td>{txSingle.confirmations}</td>
+                <td>{txSingle.timeStamp}</td>
+                <td>{txSingle.hash}</td>
+                <td>{txSingle.nonce}</td>
+                <td>{txSingle.blockHash}</td>
+                <td>{txSingle.transactionIndex}</td>
+              </tr>
+            )) }
+            </tbody>
+          </table>
         </div>
-      </div>
-      }
+        }
+        </Tab>
+        <Tab eventKey={2} title="Internal Txns">
+        { this.state.loadingIntTx && <div className="loadingDiv"><img className="loadingImage" src="/assets/img/loading.gif" /></div> }
+        { this.state.int_tx && this.state.int_tx.length == 0 && !this.state.loadingIntTx && 
+          <div className="noResultDiv"> No result! </div>}
+        { this.state.int_tx && this.state.int_tx.length > 0 &&
+          <div className="resultTxDiv">
+            <table className="table table-responsive">
+              <thead>
+                <tr>
+                    <th>Block Number</th>
+                    <th>Contract Address</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Value</th>
+                    <th>Hash</th>
+                    <th>Timestamp</th>
+                    <th>Gas</th>
+                    <th>Gas Used</th>
+                    <th>Err Code</th>
+                    <th>Is Error</th>
+                    <th>Trace ID</th>
+                    <th>Type</th>
+                </tr>
+              </thead>
+              <tbody>
+              { this.state.int_tx.map((txSingle, i) => (
+                <tr key={i}>
+                  <td>{txSingle.blockNumber}</td>
+                  <td>{txSingle.contractAddress}</td>
+                  <td>{txSingle.from}</td>
+                  <td>{txSingle.to}</td>
+                  <td>{txSingle.value/10**18} Ether</td>
+                  <td>{txSingle.hash}</td>
+                  <td>{txSingle.timeStamp}</td>
+                  <td>{txSingle.gas}</td>
+                  <td>{txSingle.gasUsed}</td>
+                  <td>{txSingle.errCode}</td>
+                  <td>{txSingle.isError}</td>
+                  <td>{txSingle.traceId}</td>
+                  <td>{txSingle.type}</td>
+                </tr>
+              )) }
+              </tbody>
+            </table>
+          </div>
+        }
+        </Tab>
+        <Tab eventKey={3} title="Token Txns">
+        { this.state.loadingTokenTx && <div className="loadingDiv"><img className="loadingImage" src="/assets/img/loading.gif" /></div> }
+        { this.state.token_tx && this.state.token_tx.length == 0 && !this.state.loadingTokenTx && 
+          <div className="noResultDiv"> No result! </div>}
+        { this.state.token_tx && this.state.token_tx.length > 0 &&
+          <div className="resultTxDiv">
+            <table className="table table-responsive">
+              <thead>
+                <tr>
+                    <th>Block Number</th>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Value</th>
+                    <th>Gas</th>
+                    <th>Gas Price</th>
+                    <th>Gas Used</th>
+                    <th>Token Decimal</th>
+                    <th>Token Name</th>
+                    <th>Token Symbol</th>
+                    <th>Contract Address</th>
+                    <th>Cumulative Gas Used</th>
+                    <th>Confirmations</th>
+                    <th>Timestamp</th>
+                    <th>Hash</th>
+                    <th>Nonce</th>
+                    <th>Block Hash</th>
+                    <th>Transaction Index</th>
+                </tr>
+              </thead>
+              <tbody>
+              { this.state.token_tx.map((txSingle, i) => (
+                <tr key={i}>
+                  <td>{txSingle.blockNumber}</td>
+                  <td>{txSingle.from}</td>
+                  <td>{txSingle.to}</td>
+                  <td>{txSingle.value/10**18} Ether</td>
+                  <td>{txSingle.gas}</td>
+                  <td>{txSingle.gasPrice}</td>
+                  <td>{txSingle.gasUsed}</td>
+                  <td>{txSingle.tokenDecimal}</td>
+                  <td>{txSingle.tokenName}</td>
+                  <td>{txSingle.tokenSymbol}</td>
+                  <td>{txSingle.contractAddress}</td>
+                  <td>{txSingle.cumulativeGasUsed}</td>
+                  <td>{txSingle.confirmations}</td>
+                  <td>{txSingle.timeStamp}</td>
+                  <td>{txSingle.hash}</td>
+                  <td>{txSingle.nonce}</td>
+                  <td>{txSingle.blockHash}</td>
+                  <td>{txSingle.transactionIndex}</td>
+                </tr>
+              )) }
+              </tbody>
+            </table>
+          </div>
+        }
+        </Tab>
+      </Tabs>
     </div>
-      {/* {JSON.stringify(this.state.tx)} */}
+      
+
+      
       </>
     );
   }
